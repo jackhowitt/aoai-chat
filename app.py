@@ -3,9 +3,11 @@ import os
 import logging
 import requests
 import openai
+import concurrent.futures
 from azure.identity import DefaultAzureCredential
-from flask import Flask, Response, request, jsonify, send_from_directory
+from flask import Flask, Response, request, jsonify, send_from_directory, abort
 from dotenv import load_dotenv
+from applicationinsights import TelemetryClient
 
 from backend.auth.auth_utils import get_authenticated_user_details
 from backend.history.cosmosdbservice import CosmosConversationClient
@@ -13,10 +15,14 @@ from backend.history.cosmosdbservice import CosmosConversationClient
 load_dotenv()
 
 app = Flask(__name__, static_folder="static")
+SECRET_KEY = os.environ.get("CUSTOM_ACCESS_KEY")
 
 # Static Files
 @app.route("/")
 def index():
+    key = request.args.get('key')
+    if key != SECRET_KEY:
+        abort(401, "Unauthorized")
     return app.send_static_file("index.html")
 
 @app.route("/favicon.ico")
@@ -27,6 +33,9 @@ def favicon():
 def assets(path):
     return send_from_directory("static/assets", path)
 
+# Create a TelemetryClient object
+instrumentation_key = os.environ.get("APP_INSIGHTS_KEY")
+tc = TelemetryClient(instrumentation_key)
 
 # ACS Integration Settings
 AZURE_SEARCH_SERVICE = os.environ.get("AZURE_SEARCH_SERVICE")
@@ -143,9 +152,24 @@ def generateFilterString(userToken):
     
     return None
 
+def log_to_application_insights(message):
+    tc.track_trace(message, severity=logging.INFO)
+    tc.flush()
 
 def prepare_body_headers_with_data(request):
     request_messages = request.json["messages"]
+
+    # Find the last user message
+    last_user_message = None
+    for message in reversed(request_messages):
+        if message["role"] == "user":
+            last_user_message = message["content"]
+            break
+
+    # Log the last user message to Application Insights asynchronously
+    if last_user_message:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.submit(log_to_application_insights, f'User: {last_user_message}')
 
     # Set query type
     query_type = "simple"

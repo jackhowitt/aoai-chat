@@ -313,6 +313,31 @@ class HTMLParser(BaseParser):
         """
         soup = BeautifulSoup(content, 'html.parser')
 
+        # Remove the entire <head> element, except for the <title> tag
+        if soup.head:
+            for tag in soup.head.find_all(True):
+                if tag.name != 'title':
+                    tag.decompose()
+
+        # Remove irrelevant tags
+        for tag in soup.find_all(['nav', 'footer', 'script', 'style', 'aside']):
+            tag.decompose()
+
+        # Extract main content
+        main_content = None
+        if soup.find('main'):
+            main_content = soup.find('main')
+        elif soup.find('article'):
+            main_content = soup.find('article')
+        else:
+            # Define your own strategy for extracting the main content
+            pass
+
+        if main_content:
+            content_text = main_content.get_text(separator=' ', strip=True)
+        else:
+            content_text = soup.get_text(separator=' ', strip=True)
+
         # Extract the title
         title = ''
         if soup.title and soup.title.string:
@@ -335,14 +360,7 @@ class HTMLParser(BaseParser):
             except StopIteration:
                 title = file_name
 
-                # Helper function to process text nodes
-
-        # Parse the content as it is without any formatting changes
-        result = content
-        if title is None:
-            title = '' # ensure no 'None' type title
-
-        return Document(content=cleanup_content(result), title=str(title))
+        return Document(content=cleanup_content(content_text), title=str(title))
 
 class TextParser(BaseParser):
     """Parses text content."""

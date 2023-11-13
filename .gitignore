@@ -1,6 +1,10 @@
 .venv
 frontend/node_modules
 .env
-# static
+scripts/
+scripts/config.json
 .azure/
 __pycache__/
+data/
+static/
+.commands
