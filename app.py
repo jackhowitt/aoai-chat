@@ -3,7 +3,11 @@ import os
 import logging
 import requests
 import openai
+<<<<<<< HEAD
 import concurrent.futures
+=======
+import copy
+>>>>>>> upstream/main
 from azure.identity import DefaultAzureCredential
 from flask import Flask, Response, request, jsonify, send_from_directory, abort
 from dotenv import load_dotenv
@@ -32,6 +36,12 @@ def favicon():
 @app.route("/assets/<path:path>")
 def assets(path):
     return send_from_directory("static/assets", path)
+
+# Debug settings
+DEBUG = os.environ.get("DEBUG", "false")
+DEBUG_LOGGING = DEBUG.lower() == "true"
+if DEBUG_LOGGING:
+    logging.basicConfig(level=logging.DEBUG)
 
 # On Your Data Settings
 DATASOURCE_TYPE = os.environ.get("DATASOURCE_TYPE", "AzureCognitiveSearch")
@@ -128,9 +138,13 @@ def is_chat_model():
 
 def should_use_data():
     if AZURE_SEARCH_SERVICE and AZURE_SEARCH_INDEX and AZURE_SEARCH_KEY:
+        if DEBUG_LOGGING:
+            logging.debug("Using Azure Cognitive Search")
         return True
     
     if AZURE_COSMOSDB_MONGO_VCORE_DATABASE and AZURE_COSMOSDB_MONGO_VCORE_CONTAINER and AZURE_COSMOSDB_MONGO_VCORE_INDEX and AZURE_COSMOSDB_MONGO_VCORE_CONNECTION_STRING:
+        if DEBUG_LOGGING:
+            logging.debug("Using Azure CosmosDB Mongo vcore")
         return True
     
     return False
@@ -152,6 +166,8 @@ def fetchUserGroups(userToken, nextLink=None):
     try :
         r = requests.get(endpoint, headers=headers)
         if r.status_code != 200:
+            if DEBUG_LOGGING:
+                logging.error(f"Error fetching user groups: {r.status_code} {r.text}")
             return []
         
         r = r.json()
@@ -161,6 +177,7 @@ def fetchUserGroups(userToken, nextLink=None):
         
         return r['value']
     except Exception as e:
+        logging.error(f"Exception in fetchUserGroups: {e}")
         return []
 
 
@@ -169,11 +186,12 @@ def generateFilterString(userToken):
     userGroups = fetchUserGroups(userToken)
 
     # Construct filter string
-    if userGroups:
-        group_ids = ", ".join([obj['id'] for obj in userGroups])
-        return f"{AZURE_SEARCH_PERMITTED_GROUPS_COLUMN}/any(g:search.in(g, '{group_ids}'))"
-    
-    return None
+    if not userGroups:
+        logging.debug("No user groups found")
+
+    group_ids = ", ".join([obj['id'] for obj in userGroups])
+    return f"{AZURE_SEARCH_PERMITTED_GROUPS_COLUMN}/any(g:search.in(g, '{group_ids}'))"
+
 
 def log_to_application_insights(message):
     tc.track_trace(message, severity=logging.INFO)
@@ -217,7 +235,12 @@ def prepare_body_headers_with_data(request):
         userToken = None
         if AZURE_SEARCH_PERMITTED_GROUPS_COLUMN:
             userToken = request.headers.get('X-MS-TOKEN-AAD-ACCESS-TOKEN', "")
+            if DEBUG_LOGGING:
+                logging.debug(f"USER TOKEN is {'present' if userToken else 'not present'}")
+
             filter = generateFilterString(userToken)
+            if DEBUG_LOGGING:
+                logging.debug(f"FILTER: {filter}")
 
         body["dataSources"].append(
             {
@@ -278,6 +301,16 @@ def prepare_body_headers_with_data(request):
             body["dataSources"][0]["parameters"]["embeddingEndpoint"] = AZURE_OPENAI_EMBEDDING_ENDPOINT
             body["dataSources"][0]["parameters"]["embeddingKey"] = AZURE_OPENAI_EMBEDDING_KEY
 
+    if DEBUG_LOGGING:
+        body_clean = copy.deepcopy(body)
+        if body_clean["dataSources"][0]["parameters"].get("key"):
+            body_clean["dataSources"][0]["parameters"]["key"] = "*****"
+        if body_clean["dataSources"][0]["parameters"].get("connectionString"):
+            body_clean["dataSources"][0]["parameters"]["connectionString"] = "*****"
+        if body_clean["dataSources"][0]["parameters"].get("embeddingKey"):
+            body_clean["dataSources"][0]["parameters"]["embeddingKey"] = "*****"
+            
+        logging.debug(f"REQUEST BODY: {json.dumps(body_clean, indent=4)}")
 
     headers = {
         'Content-Type': 'application/json',
@@ -328,6 +361,8 @@ def stream_with_data(body, headers, endpoint, history_metadata={}):
                         response["choices"][0]["messages"].append(lineJson["choices"][0]["messages"][0]["delta"])
                         yield format_as_ndjson(response)
                     elif role == "assistant": 
+                        if response['apim-request-id'] and DEBUG_LOGGING: 
+                            logging.debug(f"RESPONSE apim-request-id: {response['apim-request-id']}")
                         response["choices"][0]["messages"].append({
                             "role": "assistant",
                             "content": ""
