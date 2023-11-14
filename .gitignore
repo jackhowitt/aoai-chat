@@ -8,3 +8,4 @@ __pycache__/
 data/
 static/
 .commands
+static/index.html
