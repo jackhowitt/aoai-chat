@@ -3,11 +3,8 @@ import os
 import logging
 import requests
 import openai
-<<<<<<< HEAD
 import concurrent.futures
-=======
 import copy
->>>>>>> upstream/main
 from azure.identity import DefaultAzureCredential
 from flask import Flask, Response, request, jsonify, send_from_directory, abort
 from dotenv import load_dotenv
