@@ -64,7 +64,9 @@ export const QuestionInput = ({
         value={question}
         onChange={onQuestionChange}
         onKeyDown={onEnterPress}
-        styles={{ field: { fontSize: 16, lineHeight: 20 } }}
+        styles={{
+          field: { fontSize: 16, lineHeight: 20, minHeight: 0, marginTop: 3 },
+        }}
       />
       <div
         className={styles.questionInputSendButtonContainer}
