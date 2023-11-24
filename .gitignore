@@ -9,3 +9,4 @@ data/
 static/
 .commands
 static/index.html
+.env.backup

@@ -77,6 +77,9 @@ export const QuestionInput = ({
         onKeyDown={(e) =>
           e.key === "Enter" || e.key === " " ? sendQuestion() : null
         }
+        style={{
+          cursor: sendQuestionDisabled ? undefined : "pointer",
+        }}
       >
         {sendQuestionDisabled ? (
           <SendRegular className={styles.questionInputSendButtonDisabled} />

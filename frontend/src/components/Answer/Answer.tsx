@@ -19,7 +19,7 @@ interface Props {
 export const Answer = ({ answer, onCitationClicked }: Props) => {
   const [isRefAccordionOpen, { toggle: toggleIsRefAccordionOpen }] =
     useBoolean(false);
-  const filePathTruncationLimit = 125;
+  const filePathTruncationLimit = 100;
 
   const parsedAnswer = useMemo(() => parseAnswer(answer), [answer]);
   const [chevronIsExpanded, setChevronIsExpanded] =
@@ -41,23 +41,43 @@ export const Answer = ({ answer, onCitationClicked }: Props) => {
   ) => {
     let citationFilename = "";
 
-    if (citation.title && citation.chunk_id) {
-      if (truncate && citation.title.length > filePathTruncationLimit) {
-        const citationLength = citation.title.length;
-        citationFilename = `${citation.title.substring(
-          0,
-          20
-        )}...${citation.title.substring(citationLength - 20)}`;
-      } else {
-        citationFilename = `${citation.title}`;
-      }
-    } else if (citation.title && citation.reindex_id) {
-      citationFilename = `${citation.title}`;
+    if (citation.title && citation.title.length < 10 && citation.url) {
+      // Extract filename from the URL and decode percent-encoded characters
+      const urlParts = citation.url.split("/");
+      const filenameWithExtension = decodeURIComponent(
+        urlParts[urlParts.length - 1]
+      );
+
+      // Remove file extension and replace dashes or underscores with spaces
+      citationFilename = filenameWithExtension
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[-_]/g, " ");
     } else {
-      citationFilename = `Citation ${index}`;
+      // Your existing logic for creating the filepath...
+      if (citation.title && citation.chunk_id) {
+        if (truncate && citation.title.length > filePathTruncationLimit) {
+          const citationLength = citation.title.length;
+          citationFilename = `${citation.title.substring(
+            0,
+            30
+          )}...${citation.title.substring(citationLength - 30)}`;
+        } else {
+          citationFilename = `${citation.title}`;
+        }
+      } else if (citation.title && citation.reindex_id) {
+        citationFilename = `${citation.title}`;
+      } else {
+        citationFilename = `Link ${index}`;
+      }
     }
+
     return citationFilename;
   };
+
+  const uniqueCitations = parsedAnswer.citations.filter(
+    (citation, index, self) =>
+      index === self.findIndex((c) => c.title === citation.title)
+  );
 
   return (
     <>
@@ -111,7 +131,8 @@ export const Answer = ({ answer, onCitationClicked }: Props) => {
           )}
           <Stack.Item className={styles.answerDisclaimerContainer}>
             <span className={styles.answerDisclaimer}>
-              AI-generated content may be incorrect or out of date.
+              Our AI Chat can make mistakes. Consider checking important
+              information.
             </span>
           </Stack.Item>
         </Stack>
@@ -128,7 +149,7 @@ export const Answer = ({ answer, onCitationClicked }: Props) => {
               paddingLeft: 10,
             }}
           >
-            {parsedAnswer.citations.map((citation, idx) => {
+            {uniqueCitations.map((citation, idx) => {
               return (
                 <span
                   title={createCitationFilepath(citation, ++idx)}
@@ -144,7 +165,6 @@ export const Answer = ({ answer, onCitationClicked }: Props) => {
                   className={styles.citationContainer}
                   aria-label={createCitationFilepath(citation, idx)}
                 >
-                  <div className={styles.citation}>{idx}</div>
                   {createCitationFilepath(citation, idx, true)}
                 </span>
               );

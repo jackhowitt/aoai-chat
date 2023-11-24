@@ -820,6 +820,12 @@ const Chat = () => {
                     background: disabledButton() ? "whitesmoke" : "#000000",
                     cursor: disabledButton() ? "" : "pointer",
                   },
+                  rootHovered: {
+                    // Change the icon color to black on hover
+                    ".ms-Button-icon": {
+                      color: "#000000 !important", // Use !important to ensure it takes precedence
+                    },
+                  },
                 }}
                 className={
                   appStateContext?.state.isCosmosDBAvailable?.status !==
@@ -828,10 +834,10 @@ const Chat = () => {
                     : styles.clearChatBroomNoCosmos
                 }
                 iconProps={{
-                  iconName: "Broom",
+                  iconName: "Delete",
                   styles: {
                     root: [
-                      { color: "#FFFFFF" }, // Icon color
+                      { color: "#FFFFFF" }, // Default icon color
                     ],
                   },
                 }}
@@ -844,6 +850,7 @@ const Chat = () => {
                 disabled={disabledButton()}
                 aria-label="clear chat button"
               />
+
               <Dialog
                 hidden={hideErrorDialog}
                 onDismiss={handleErrorDialogClose}
