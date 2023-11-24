@@ -744,9 +744,6 @@ const Chat = () => {
                         />
                         <span>Error</span>
                       </Stack>
-                      <span className={styles.chatMessageErrorContent}>
-                        {answer.content}
-                      </span>
                     </div>
                   ) : null}
                 </>
