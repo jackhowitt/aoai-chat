@@ -414,7 +414,9 @@ const Chat = () => {
             );
             return;
           }
-          resultConversation.messages.push(toolMessage, assistantMessage);
+          isEmpty(toolMessage)
+            ? resultConversation.messages.push(assistantMessage)
+            : resultConversation.messages.push(toolMessage, assistantMessage);
         } else {
           resultConversation = {
             id: result.history_metadata.conversation_id,
@@ -422,7 +424,9 @@ const Chat = () => {
             messages: [userMessage],
             date: result.history_metadata.date,
           };
-          resultConversation.messages.push(toolMessage, assistantMessage);
+          isEmpty(toolMessage)
+            ? resultConversation.messages.push(assistantMessage)
+            : resultConversation.messages.push(toolMessage, assistantMessage);
         }
         if (!resultConversation) {
           setIsLoading(false);
@@ -436,7 +440,9 @@ const Chat = () => {
           type: "UPDATE_CURRENT_CHAT",
           payload: resultConversation,
         });
-        setMessages([...messages, toolMessage, assistantMessage]);
+        isEmpty(toolMessage)
+          ? setMessages([...messages, assistantMessage])
+          : setMessages([...messages, toolMessage, assistantMessage]);
       }
     } catch (e) {
       if (!abortController.signal.aborted) {
