@@ -191,23 +191,38 @@ def generateFilterString(userToken):
 
 
 def log_to_application_insights(message):
-    tc.track_trace(message, severity=logging.INFO)
-    tc.flush()
+    try:
+        tc.track_trace(message, severity=logging.INFO)
+        tc.flush()
+    except Exception as e:
+        # Handle/logging the exception
+        logging.error(f"Error in log_to_application_insights: {e}")
 
 def prepare_body_headers_with_data(request):
-    request_messages = request.json["messages"]
+    try:
+        request_messages = request.json["messages"]
+    except KeyError:
+        logging.error("Key 'messages' not found in the request")
+        return
+    except Exception as e:
+        logging.error(f"Unexpected error when accessing request data: {e}")
+        return
 
     # Find the last user message
     last_user_message = None
     for message in reversed(request_messages):
-        if message["role"] == "user":
-            last_user_message = message["content"]
+        if message.get("role") == "user":
+            last_user_message = message.get("content")
             break
 
     # Log the last user message to Application Insights asynchronously
     if last_user_message:
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.submit(log_to_application_insights, f'User: {last_user_message}')
+            future = executor.submit(log_to_application_insights, f'User: {last_user_message}')
+            try:
+                future.result()  # This is to catch exceptions in the log_to_application_insights function
+            except Exception as e:
+                logging.error(f"Error in logging to Application Insights: {e}")
 
     body = {
         "messages": request_messages,
@@ -497,7 +512,7 @@ def stream_without_data(response, history_metadata={}):
 def conversation_without_data(request_body):
     openai.api_type = "azure"
     openai.api_base = AZURE_OPENAI_ENDPOINT if AZURE_OPENAI_ENDPOINT else f"https://{AZURE_OPENAI_RESOURCE}.openai.azure.com/"
-    openai.api_version = "2023-09-01-preview"
+    openai.api_version = "2023-08-01-preview"
     openai.api_key = AZURE_OPENAI_KEY
 
     request_messages = request_body["messages"]
@@ -811,7 +826,7 @@ def generate_title(conversation_messages):
         base_url = AZURE_OPENAI_ENDPOINT if AZURE_OPENAI_ENDPOINT else f"https://{AZURE_OPENAI_RESOURCE}.openai.azure.com/"
         openai.api_type = "azure"
         openai.api_base = base_url
-        openai.api_version = "2023-09-01-preview"
+        openai.api_version = "2023-08-01-preview"
         openai.api_key = AZURE_OPENAI_KEY
         completion = openai.ChatCompletion.create(    
             engine=AZURE_OPENAI_MODEL,

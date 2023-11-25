@@ -10,3 +10,4 @@ static/
 .commands
 static/index.html
 .env.backup
+app-old.py

@@ -12,7 +12,7 @@ export async function conversationApi(
   options: ConversationRequest,
   abortSignal: AbortSignal
 ): Promise<Response> {
-  // Include only the 6 most recent messages
+  // Include only the 7 most recent messages
   const recentMessages = options.messages.slice(-7);
 
   const response = await fetch("/conversation", {
