@@ -11,3 +11,4 @@ static/
 static/index.html
 .env.backup
 app-old.py
+.ipynb_checkpoints/
